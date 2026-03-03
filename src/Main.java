@@ -1,18 +1,25 @@
-import java.util.ArrayList;
-import java.util.List;
+public class Main {
+    public static void main(String[] args) {
+        // Setup
+        RoomInventory inventory = new RoomInventory();
+        inventory.initializeRooms();
 
-public class RoomInventory {
-    private List<Room> rooms = new ArrayList<>();
+        System.out.println("--- UC4: Room Search & Availability Check ---");
 
-    public void initializeRooms() {
-        rooms.add(new Room(101, "Single", true));
-        rooms.add(new Room(102, "Double", true));
-        rooms.add(new Room(201, "Suite", false));
-    }
+        // Guest initiates search
+        System.out.println("Guest Request: Show me available rooms...");
 
-    public void displayInventory() {
-        for (Room r : rooms) {
-            System.out.println(r);
+        var availableRooms = inventory.getAvailableRooms();
+
+        if (availableRooms.isEmpty()) {
+            System.out.println("Validation: No rooms currently available.");
+        } else {
+            System.out.println("Search Results (Filtered):");
+            for (Room r : availableRooms) {
+                System.out.println("-> " + r);
+            }
         }
+
+        System.out.println("System State: Unchanged (Read-only operation complete).");
     }
 }
