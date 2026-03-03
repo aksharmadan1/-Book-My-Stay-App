@@ -1,15 +1,18 @@
-public class Room {
-    private int roomNumber;
-    private String type;
-    private boolean isAvailable;
+import java.util.ArrayList;
+import java.util.List;
 
-    public Room(int roomNumber, String type, boolean isAvailable) {
-        this.roomNumber = roomNumber;
-        this.type = type;
-        this.isAvailable = isAvailable;
+public class RoomInventory {
+    private List<Room> rooms = new ArrayList<>();
+
+    public void initializeRooms() {
+        rooms.add(new Room(101, "Single", true));
+        rooms.add(new Room(102, "Double", true));
+        rooms.add(new Room(201, "Suite", false));
     }
-    @Override
-    public String toString() {
-        return "Room " + roomNumber + " [" + type + "] - " + (isAvailable ? "Available" : "Occupied");
+
+    public void displayInventory() {
+        for (Room r : rooms) {
+            System.out.println(r);
+        }
     }
 }
