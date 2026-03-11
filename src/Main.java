@@ -1,51 +1,60 @@
 import java.util.*;
 
-// Class to represent an individual Add-On Service
-class Service {
-    String name;
-    double price;
+// Class to represent a confirmed Reservation
+class Reservation {
+    String reservationId;
+    String guestName;
+    String roomType;
+    double totalCost;
 
-    Service(String name, double price) {
-        this.name = name;
-        this.price = price;
+    Reservation(String id, String name, String type, double cost) {
+        this.reservationId = id;
+        this.guestName = name;
+        this.roomType = type;
+        this.totalCost = cost;
     }
 
     @Override
     public String toString() {
-        return name + " ($" + price + ")";
+        return String.format("ID: %s | Guest: %s | Room: %s | Paid: $%.2f",
+                reservationId, guestName, roomType, totalCost);
     }
 }
 
-public class UseCase7AddOnServiceSelection {
+public class UseCase8BookingHistoryReport {
     public static void main(String[] args) {
-        // Map to store: ReservationID -> List of selected Services (One-to-Many)
-        Map<String, List<Service>> addonManager = new HashMap<>();
+        // Key Concept: List preserves insertion order for chronological tracking
+        List<Reservation> bookingHistory = new ArrayList<>();
 
-        // 1. Existing Reservation ID from UC6
-        String reservationId = "DELUXE-101";
+        // 1. Simulating successful confirmations being added to history
+        bookingHistory.add(new Reservation("RES101", "Alice", "Deluxe", 150.00));
+        bookingHistory.add(new Reservation("RES102", "Bob", "Suite", 300.00));
+        bookingHistory.add(new Reservation("RES103", "Charlie", "Deluxe", 150.00));
 
-        // 2. Guest selects multiple services
-        List<Service> selectedServices = new ArrayList<>();
-        selectedServices.add(new Service("Breakfast Buffet", 25.0));
-        selectedServices.add(new Service("Late Check-out", 15.0));
-        selectedServices.add(new Service("Airport Shuttle", 40.0));
+        // 2. Admin Request: Generate Operational Report
+        System.out.println("--- UC8: Booking History & Audit Trail ---");
+        System.out.println("Generating Report for Admin...");
+        System.out.println("------------------------------------------");
 
-        // 3. Mapping the services to the Reservation ID
-        addonManager.put(reservationId, selectedServices);
+        double totalRevenue = 0;
+        int deluxeCount = 0;
+        int suiteCount = 0;
 
-        // 4. Cost Aggregation (Calculating total extra cost)
-        double totalExtraCost = 0;
-        System.out.println("--- UC7: Add-On Service Selection ---");
-        System.out.println("Reservation ID: " + reservationId);
-        System.out.println("Selected Services:");
+        for (Reservation res : bookingHistory) {
+            System.out.println(res);
+            totalRevenue += res.totalCost;
 
-        for (Service s : addonManager.get(reservationId)) {
-            System.out.println("- " + s);
-            totalExtraCost += s.price;
+            if (res.roomType.equalsIgnoreCase("Deluxe")) deluxeCount++;
+            else if (res.roomType.equalsIgnoreCase("Suite")) suiteCount++;
         }
 
-        System.out.println("------------------------------------");
-        System.out.println("Total Additional Cost: $" + totalExtraCost);
-        System.out.println("Core Inventory Status: Unchanged (Safe)");
+        // 3. Summary Reporting
+        System.out.println("------------------------------------------");
+        System.out.println("SUMMARY REPORT");
+        System.out.println("Total Reservations: " + bookingHistory.size());
+        System.out.println("Deluxe Rooms Booked: " + deluxeCount);
+        System.out.println("Suites Booked: " + suiteCount);
+        System.out.println("Total Revenue: $" + totalRevenue);
+        System.out.println("------------------------------------------");
     }
 }
