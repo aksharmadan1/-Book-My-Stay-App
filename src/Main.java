@@ -1,60 +1,59 @@
 import java.util.*;
 
-// Class to represent a confirmed Reservation
-class Reservation {
-    String reservationId;
-    String guestName;
-    String roomType;
-    double totalCost;
-
-    Reservation(String id, String name, String type, double cost) {
-        this.reservationId = id;
-        this.guestName = name;
-        this.roomType = type;
-        this.totalCost = cost;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("ID: %s | Guest: %s | Room: %s | Paid: $%.2f",
-                reservationId, guestName, roomType, totalCost);
+// 1. CUSTOM EXCEPTION: Explicitly handles booking-specific failures
+class InvalidBookingException extends Exception {
+    public InvalidBookingException(String message) {
+        super(message);
     }
 }
 
-public class UseCase8BookingHistoryReport {
-    public static void main(String[] args) {
-        // Key Concept: List preserves insertion order for chronological tracking
-        List<Reservation> bookingHistory = new ArrayList<>();
+public class UseCase9ErrorHandlingValidation {
+    // Inventory state (Mocking UC6)
+    private static Map<String, Integer> inventory = new HashMap<>();
 
-        // 1. Simulating successful confirmations being added to history
-        bookingHistory.add(new Reservation("RES101", "Alice", "Deluxe", 150.00));
-        bookingHistory.add(new Reservation("RES102", "Bob", "Suite", 300.00));
-        bookingHistory.add(new Reservation("RES103", "Charlie", "Deluxe", 150.00));
+    static {
+        inventory.put("Deluxe", 1); // Only 1 room available
+        inventory.put("Suite", 5);
+    }
 
-        // 2. Admin Request: Generate Operational Report
-        System.out.println("--- UC8: Booking History & Audit Trail ---");
-        System.out.println("Generating Report for Admin...");
-        System.out.println("------------------------------------------");
-
-        double totalRevenue = 0;
-        int deluxeCount = 0;
-        int suiteCount = 0;
-
-        for (Reservation res : bookingHistory) {
-            System.out.println(res);
-            totalRevenue += res.totalCost;
-
-            if (res.roomType.equalsIgnoreCase("Deluxe")) deluxeCount++;
-            else if (res.roomType.equalsIgnoreCase("Suite")) suiteCount++;
+    // 2. FAIL-FAST VALIDATION: Logic to guard system state
+    public static void validateBooking(String roomType) throws InvalidBookingException {
+        // Validate Room Type exists
+        if (!inventory.containsKey(roomType)) {
+            throw new InvalidBookingException("Error: Invalid Room Type provided [" + roomType + "].");
         }
 
-        // 3. Summary Reporting
-        System.out.println("------------------------------------------");
-        System.out.println("SUMMARY REPORT");
-        System.out.println("Total Reservations: " + bookingHistory.size());
-        System.out.println("Deluxe Rooms Booked: " + deluxeCount);
-        System.out.println("Suites Booked: " + suiteCount);
-        System.out.println("Total Revenue: $" + totalRevenue);
-        System.out.println("------------------------------------------");
+        // Prevent negative or zero inventory
+        if (inventory.get(roomType) <= 0) {
+            throw new InvalidBookingException("Error: No rooms available for [" + roomType + "].");
+        }
+    }
+
+    public static void main(String[] args) {
+        System.out.println("--- UC9: Error Handling & Validation ---");
+
+        // Test Cases: 1 Valid, 1 Out of Stock, 1 Invalid Type
+        String[] requests = {"Deluxe", "Deluxe", "Penthouse"};
+
+        for (String type : requests) {
+            try {
+                System.out.println("\nValidating request for: " + type);
+
+                // Perform validation before any processing
+                validateBooking(type);
+
+                // If code reaches here, validation passed
+                inventory.put(type, inventory.get(type) - 1);
+                System.out.println("Status: SUCCESS. Room allocated.");
+
+            } catch (InvalidBookingException e) {
+                // 3. GRACEFUL FAILURE: Error communicated without crashing
+                System.out.println("Status: FAILED. Reason: " + e.getMessage());
+            } finally {
+                System.out.println("Current " + type + " Inventory: " + inventory.getOrDefault(type, 0));
+            }
+        }
+
+        System.out.println("\nSystem remains stable and continues to run.");
     }
 }
