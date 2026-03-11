@@ -1,51 +1,51 @@
 import java.util.*;
 
-public class UseCase6ReservationApp {
-    // Map to track allocated room IDs grouped by Room Type
-    private static Map<String, Set<String>> allocatedRooms = new HashMap<>();
+// Class to represent an individual Add-On Service
+class Service {
+    String name;
+    double price;
 
-    // Inventory: Room Type -> Count
-    private static Map<String, Integer> inventory = new HashMap<>();
+    Service(String name, double price) {
+        this.name = name;
+        this.price = price;
+    }
 
+    @Override
+    public String toString() {
+        return name + " ($" + price + ")";
+    }
+}
+
+public class UseCase7AddOnServiceSelection {
     public static void main(String[] args) {
-        // Initialize Inventory
-        inventory.put("Deluxe", 2);
-        inventory.put("Suite", 1);
+        // Map to store: ReservationID -> List of selected Services (One-to-Many)
+        Map<String, List<Service>> addonManager = new HashMap<>();
 
-        // Queue for incoming booking requests (FIFO)
-        Queue<String> bookingRequests = new LinkedList<>();
-        bookingRequests.add("Deluxe");
-        bookingRequests.add("Deluxe");
-        bookingRequests.add("Suite");
-        bookingRequests.add("Suite"); // This one should fail (No inventory)
+        // 1. Existing Reservation ID from UC6
+        String reservationId = "DELUXE-101";
 
-        System.out.println("--- UC6: Room Allocation System ---");
+        // 2. Guest selects multiple services
+        List<Service> selectedServices = new ArrayList<>();
+        selectedServices.add(new Service("Breakfast Buffet", 25.0));
+        selectedServices.add(new Service("Late Check-out", 15.0));
+        selectedServices.add(new Service("Airport Shuttle", 40.0));
 
-        while (!bookingRequests.isEmpty()) {
-            String requestedType = bookingRequests.poll();
-            System.out.println("\nProcessing request for: " + requestedType);
+        // 3. Mapping the services to the Reservation ID
+        addonManager.put(reservationId, selectedServices);
 
-            // 1. Check Availability
-            if (inventory.getOrDefault(requestedType, 0) > 0) {
+        // 4. Cost Aggregation (Calculating total extra cost)
+        double totalExtraCost = 0;
+        System.out.println("--- UC7: Add-On Service Selection ---");
+        System.out.println("Reservation ID: " + reservationId);
+        System.out.println("Selected Services:");
 
-                // 2. Generate Unique Room ID
-                String roomId = requestedType.toUpperCase() + "-" + (100 + new Random().nextInt(900));
-
-                // 3. Prevent Double Booking using Set uniqueness
-                allocatedRooms.putIfAbsent(requestedType, new HashSet<>());
-
-                if (!allocatedRooms.get(requestedType).contains(roomId)) {
-                    allocatedRooms.get(requestedType).add(roomId);
-
-                    // 4. Atomic-like Update: Decrement Inventory immediately
-                    inventory.put(requestedType, inventory.get(requestedType) - 1);
-
-                    System.out.println("Status: CONFIRMED");
-                    System.out.println("Assigned Room ID: " + roomId);
-                }
-            } else {
-                System.out.println("Status: REJECTED - No " + requestedType + " rooms available.");
-            }
+        for (Service s : addonManager.get(reservationId)) {
+            System.out.println("- " + s);
+            totalExtraCost += s.price;
         }
+
+        System.out.println("------------------------------------");
+        System.out.println("Total Additional Cost: $" + totalExtraCost);
+        System.out.println("Core Inventory Status: Unchanged (Safe)");
     }
 }
