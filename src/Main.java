@@ -1,50 +1,65 @@
+import java.io.*;
 import java.util.*;
 
-public class UseCase11ConcurrentBookingSimulation {
-    // Shared Mutable State
-    private static int deluxeInventory = 5;
-    private static final Object lock = new Object(); // Synchronization lock
+// Class must implement Serializable to be saved to a file
+class BookingState implements Serializable {
+    private static final long serialVersionUID = 1L;
+    Map<String, Integer> inventory;
+    List<String> history;
+
+    BookingState(Map<String, Integer> inventory, List<String> history) {
+        this.inventory = inventory;
+        this.history = history;
+    }
+}
+
+public class UseCase12DataPersistenceRecovery {
+    private static final String FILE_NAME = "system_state.ser";
 
     public static void main(String[] args) {
-        System.out.println("--- UC11: Concurrent Booking Simulation ---");
-        System.out.println("Initial Inventory: " + deluxeInventory);
-        System.out.println("Simulating 10 concurrent requests for 5 rooms...\n");
+        System.out.println("--- UC12: Data Persistence & System Recovery ---");
 
-        // Creating multiple threads to simulate concurrent guests
-        Thread[] guests = new Thread[10];
+        // 1. Initial State
+        Map<String, Integer> currentInventory = new HashMap<>();
+        currentInventory.put("Deluxe", 10);
+        List<String> currentHistory = new ArrayList<>();
+        currentHistory.add("Initial System Startup - " + new Date());
 
-        for (int i = 0; i < guests.length; i++) {
-            final int guestId = i + 1;
-            guests[i] = new Thread(() -> {
-                processBooking(guestId);
-            });
-            guests[i].start();
+        // 2. SERIALIZATION: Saving the state
+        saveState(new BookingState(currentInventory, currentHistory));
+
+        // 3. DESERIALIZATION: Recovering the state
+        BookingState recoveredState = loadState();
+
+        if (recoveredState != null) {
+            System.out.println("\n--- System Recovery Successful ---");
+            System.out.println("Recovered Inventory: " + recoveredState.inventory);
+            System.out.println("Recovered History: " + recoveredState.history);
+        } else {
+            System.out.println("\n--- Starting with Default State (No persistence found) ---");
         }
-
-        // Wait for all threads to finish
-        for (Thread t : guests) {
-            try { t.join(); } catch (InterruptedException e) { e.printStackTrace(); }
-        }
-
-        System.out.println("\nFinal Deluxe Inventory: " + deluxeInventory);
-        System.out.println("Simulation Complete. System state is consistent.");
     }
 
-    // Key Concept: Synchronized Access (Thread Safety)
-    // Only one thread can enter this block at a time
-    private static void processBooking(int guestId) {
-        synchronized (lock) {
-            System.out.print("Guest-" + guestId + " is attempting to book... ");
+    // Key Concept: Writing objects to a durable medium (File)
+    private static void saveState(BookingState state) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+            oos.writeObject(state);
+            System.out.println("System state serialized and saved to " + FILE_NAME);
+        } catch (IOException e) {
+            System.out.println("Error during persistence: " + e.getMessage());
+        }
+    }
 
-            if (deluxeInventory > 0) {
-                // Simulate processing delay to emphasize race condition risk
-                try { Thread.sleep(50); } catch (InterruptedException e) {}
+    // Key Concept: Reconstructing objects from persisted data
+    private static BookingState loadState() {
+        File file = new File(FILE_NAME);
+        if (!file.exists()) return null;
 
-                deluxeInventory--;
-                System.out.println("SUCCESS! Room allocated.");
-            } else {
-                System.out.println("FAILED. No rooms left.");
-            }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
+            return (BookingState) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Recovery failed (Corrupted file): " + e.getMessage());
+            return null;
         }
     }
 }
