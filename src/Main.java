@@ -1,87 +1,51 @@
 import java.util.*;
 
-// --- UC2: Room Domain Model ---
-class Room {
-    private int roomNumber;
-    private String type;
-    private boolean isAvailable;
+public class UseCase6ReservationApp {
+    // Map to track allocated room IDs grouped by Room Type
+    private static Map<String, Set<String>> allocatedRooms = new HashMap<>();
 
-    public Room(int roomNumber, String type, boolean isAvailable) {
-        this.roomNumber = roomNumber;
-        this.type = type;
-        this.isAvailable = isAvailable;
-    }
+    // Inventory: Room Type -> Count
+    private static Map<String, Integer> inventory = new HashMap<>();
 
-    public boolean isAvailable() { return isAvailable; }
-
-    @Override
-    public String toString() {
-        return "Room " + roomNumber + " [" + type + "] - " + (isAvailable ? "Available" : "Occupied");
-    }
-}
-
-// --- UC5: Reservation Request Model ---
-class Reservation {
-    private String guestName;
-    private String roomTypeRequested;
-
-    public Reservation(String guestName, String roomTypeRequested) {
-        this.guestName = guestName;
-        this.roomTypeRequested = roomTypeRequested;
-    }
-
-    @Override
-    public String toString() {
-        return "[Guest: " + guestName + " | Requested: " + roomTypeRequested + "]";
-    }
-}
-
-public class Main {
     public static void main(String[] args) {
-        // --- UC1: Welcome Message ---
-        System.out.println("==========================================");
-        System.out.println("   WELCOME TO BOOK-MY-STAY HOTEL SYSTEM   ");
-        System.out.println("==========================================\n");
+        // Initialize Inventory
+        inventory.put("Deluxe", 2);
+        inventory.put("Suite", 1);
 
-        // --- UC3: Centralized Room Inventory Management ---
-        List<Room> inventory = new ArrayList<>();
-        inventory.add(new Room(101, "Single", true));
-        inventory.add(new Room(102, "Double", true));
-        inventory.add(new Room(201, "Suite", false)); // Occupied
-        inventory.add(new Room(301, "Suite", true));
+        // Queue for incoming booking requests (FIFO)
+        Queue<String> bookingRequests = new LinkedList<>();
+        bookingRequests.add("Deluxe");
+        bookingRequests.add("Deluxe");
+        bookingRequests.add("Suite");
+        bookingRequests.add("Suite"); // This one should fail (No inventory)
 
-        // --- UC4: Room Search & Availability Check (Read-Only) ---
-        System.out.println("GUEST SEARCH: Looking for available rooms...");
-        List<Room> availableRooms = new ArrayList<>();
-        for (Room r : inventory) {
-            if (r.isAvailable()) {
-                availableRooms.add(r);
+        System.out.println("--- UC6: Room Allocation System ---");
+
+        while (!bookingRequests.isEmpty()) {
+            String requestedType = bookingRequests.poll();
+            System.out.println("\nProcessing request for: " + requestedType);
+
+            // 1. Check Availability
+            if (inventory.getOrDefault(requestedType, 0) > 0) {
+
+                // 2. Generate Unique Room ID
+                String roomId = requestedType.toUpperCase() + "-" + (100 + new Random().nextInt(900));
+
+                // 3. Prevent Double Booking using Set uniqueness
+                allocatedRooms.putIfAbsent(requestedType, new HashSet<>());
+
+                if (!allocatedRooms.get(requestedType).contains(roomId)) {
+                    allocatedRooms.get(requestedType).add(roomId);
+
+                    // 4. Atomic-like Update: Decrement Inventory immediately
+                    inventory.put(requestedType, inventory.get(requestedType) - 1);
+
+                    System.out.println("Status: CONFIRMED");
+                    System.out.println("Assigned Room ID: " + roomId);
+                }
+            } else {
+                System.out.println("Status: REJECTED - No " + requestedType + " rooms available.");
             }
         }
-
-        for (Room r : availableRooms) {
-            System.out.println("-> " + r);
-        }
-
-        // --- UC5: Booking Request Intake (FIFO Queue) ---
-        System.out.println("\nSYSTEM: Receiving Booking Requests (Peak Demand)...");
-        Queue<Reservation> bookingQueue = new LinkedList<>();
-
-        // Guests arriving in order
-        bookingQueue.add(new Reservation("Alice", "Suite"));
-        bookingQueue.add(new Reservation("Bob", "Single"));
-        bookingQueue.add(new Reservation("Charlie", "Double"));
-
-        System.out.println("STATUS: Booking Queue established (Arrival Order preserved).");
-        System.out.println("TOTAL REQUESTS IN LINE: " + bookingQueue.size());
-
-        // Displaying the Queue
-        for (Reservation res : bookingQueue) {
-            System.out.println("   Waiting: " + res);
-        }
-
-        System.out.println("\n==========================================");
-        System.out.println("   UC1-UC5 IMPLEMENTATION COMPLETE        ");
-        System.out.println("==========================================");
     }
 }
