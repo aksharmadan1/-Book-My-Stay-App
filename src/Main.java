@@ -1,59 +1,56 @@
 import java.util.*;
 
-// 1. CUSTOM EXCEPTION: Explicitly handles booking-specific failures
-class InvalidBookingException extends Exception {
-    public InvalidBookingException(String message) {
-        super(message);
-    }
-}
-
-public class UseCase9ErrorHandlingValidation {
-    // Inventory state (Mocking UC6)
+public class UseCase10BookingCancellation {
+    // Current Inventory
     private static Map<String, Integer> inventory = new HashMap<>();
+    // Active Reservations: ReservationID -> RoomType
+    private static Map<String, String> activeReservations = new HashMap<>();
+    // Rollback Structure: Tracks recently released Room IDs
+    private static Stack<String> releasedRoomIds = new Stack<>();
 
     static {
-        inventory.put("Deluxe", 1); // Only 1 room available
-        inventory.put("Suite", 5);
+        inventory.put("Deluxe", 0); // Assume all booked
+        activeReservations.put("RES101", "Deluxe");
     }
 
-    // 2. FAIL-FAST VALIDATION: Logic to guard system state
-    public static void validateBooking(String roomType) throws InvalidBookingException {
-        // Validate Room Type exists
-        if (!inventory.containsKey(roomType)) {
-            throw new InvalidBookingException("Error: Invalid Room Type provided [" + roomType + "].");
-        }
+    public static void cancelBooking(String resId) {
+        System.out.println("\nInitiating cancellation for: " + resId);
 
-        // Prevent negative or zero inventory
-        if (inventory.get(roomType) <= 0) {
-            throw new InvalidBookingException("Error: No rooms available for [" + roomType + "].");
+        // 1. Validation: Ensure reservation exists
+        if (activeReservations.containsKey(resId)) {
+            String roomType = activeReservations.get(resId);
+
+            // 2. Rollback Logic: Record the "released" state
+            // In a real app, this room ID would go back to the available pool
+            releasedRoomIds.push("ROOM-ID-FOR-" + resId);
+
+            // 3. Inventory Restoration: Increment count
+            inventory.put(roomType, inventory.get(roomType) + 1);
+
+            // 4. State Update: Remove from active bookings
+            activeReservations.remove(resId);
+
+            System.out.println("Status: SUCCESS. Inventory rolled back for " + roomType);
+            System.out.println("Room ID added to Rollback Stack: " + releasedRoomIds.peek());
+        } else {
+            // 5. Reject invalid or duplicate cancellations
+            System.out.println("Status: FAILED. Reservation ID not found or already cancelled.");
         }
     }
 
     public static void main(String[] args) {
-        System.out.println("--- UC9: Error Handling & Validation ---");
+        System.out.println("--- UC10: Booking Cancellation & Inventory Rollback ---");
+        System.out.println("Initial Deluxe Inventory: " + inventory.get("Deluxe"));
 
-        // Test Cases: 1 Valid, 1 Out of Stock, 1 Invalid Type
-        String[] requests = {"Deluxe", "Deluxe", "Penthouse"};
+        // Valid Cancellation
+        cancelBooking("RES101");
 
-        for (String type : requests) {
-            try {
-                System.out.println("\nValidating request for: " + type);
+        // Invalid Cancellation (Already removed)
+        cancelBooking("RES101");
 
-                // Perform validation before any processing
-                validateBooking(type);
-
-                // If code reaches here, validation passed
-                inventory.put(type, inventory.get(type) - 1);
-                System.out.println("Status: SUCCESS. Room allocated.");
-
-            } catch (InvalidBookingException e) {
-                // 3. GRACEFUL FAILURE: Error communicated without crashing
-                System.out.println("Status: FAILED. Reason: " + e.getMessage());
-            } finally {
-                System.out.println("Current " + type + " Inventory: " + inventory.getOrDefault(type, 0));
-            }
-        }
-
-        System.out.println("\nSystem remains stable and continues to run.");
+        // Summary of state
+        System.out.println("\n------------------------------------------");
+        System.out.println("Final Deluxe Inventory: " + inventory.get("Deluxe"));
+        System.out.println("Total Released Rooms in Stack: " + releasedRoomIds.size());
     }
 }
