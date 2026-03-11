@@ -1,56 +1,50 @@
 import java.util.*;
 
-public class UseCase10BookingCancellation {
-    // Current Inventory
-    private static Map<String, Integer> inventory = new HashMap<>();
-    // Active Reservations: ReservationID -> RoomType
-    private static Map<String, String> activeReservations = new HashMap<>();
-    // Rollback Structure: Tracks recently released Room IDs
-    private static Stack<String> releasedRoomIds = new Stack<>();
-
-    static {
-        inventory.put("Deluxe", 0); // Assume all booked
-        activeReservations.put("RES101", "Deluxe");
-    }
-
-    public static void cancelBooking(String resId) {
-        System.out.println("\nInitiating cancellation for: " + resId);
-
-        // 1. Validation: Ensure reservation exists
-        if (activeReservations.containsKey(resId)) {
-            String roomType = activeReservations.get(resId);
-
-            // 2. Rollback Logic: Record the "released" state
-            // In a real app, this room ID would go back to the available pool
-            releasedRoomIds.push("ROOM-ID-FOR-" + resId);
-
-            // 3. Inventory Restoration: Increment count
-            inventory.put(roomType, inventory.get(roomType) + 1);
-
-            // 4. State Update: Remove from active bookings
-            activeReservations.remove(resId);
-
-            System.out.println("Status: SUCCESS. Inventory rolled back for " + roomType);
-            System.out.println("Room ID added to Rollback Stack: " + releasedRoomIds.peek());
-        } else {
-            // 5. Reject invalid or duplicate cancellations
-            System.out.println("Status: FAILED. Reservation ID not found or already cancelled.");
-        }
-    }
+public class UseCase11ConcurrentBookingSimulation {
+    // Shared Mutable State
+    private static int deluxeInventory = 5;
+    private static final Object lock = new Object(); // Synchronization lock
 
     public static void main(String[] args) {
-        System.out.println("--- UC10: Booking Cancellation & Inventory Rollback ---");
-        System.out.println("Initial Deluxe Inventory: " + inventory.get("Deluxe"));
+        System.out.println("--- UC11: Concurrent Booking Simulation ---");
+        System.out.println("Initial Inventory: " + deluxeInventory);
+        System.out.println("Simulating 10 concurrent requests for 5 rooms...\n");
 
-        // Valid Cancellation
-        cancelBooking("RES101");
+        // Creating multiple threads to simulate concurrent guests
+        Thread[] guests = new Thread[10];
 
-        // Invalid Cancellation (Already removed)
-        cancelBooking("RES101");
+        for (int i = 0; i < guests.length; i++) {
+            final int guestId = i + 1;
+            guests[i] = new Thread(() -> {
+                processBooking(guestId);
+            });
+            guests[i].start();
+        }
 
-        // Summary of state
-        System.out.println("\n------------------------------------------");
-        System.out.println("Final Deluxe Inventory: " + inventory.get("Deluxe"));
-        System.out.println("Total Released Rooms in Stack: " + releasedRoomIds.size());
+        // Wait for all threads to finish
+        for (Thread t : guests) {
+            try { t.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+        }
+
+        System.out.println("\nFinal Deluxe Inventory: " + deluxeInventory);
+        System.out.println("Simulation Complete. System state is consistent.");
+    }
+
+    // Key Concept: Synchronized Access (Thread Safety)
+    // Only one thread can enter this block at a time
+    private static void processBooking(int guestId) {
+        synchronized (lock) {
+            System.out.print("Guest-" + guestId + " is attempting to book... ");
+
+            if (deluxeInventory > 0) {
+                // Simulate processing delay to emphasize race condition risk
+                try { Thread.sleep(50); } catch (InterruptedException e) {}
+
+                deluxeInventory--;
+                System.out.println("SUCCESS! Room allocated.");
+            } else {
+                System.out.println("FAILED. No rooms left.");
+            }
+        }
     }
 }
